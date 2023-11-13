@@ -1,18 +1,18 @@
 <html lang="en">
 
 <head>
-    <title>Crypto Price</title>
+    <title>Server Send Event</title>
 </head>
 
 <body>
-<h1>Crypto Price</h1>
+<h1>Events</h1>
 
-<p id="price" style="font-size:40px;">Loading price...</p>
+<p id="text" style="font-size:40px;">Loading price...</p>
 
 <script>
-    const priceEl = document.getElementById("price");
+    const text = document.getElementById("text");
 
-    const es = new EventSource("/crypto-price");
+    const es = new EventSource("/events");
     es.onerror = (err) => {
         console.log("onerror", err)
     };
@@ -25,12 +25,12 @@
         console.log("onopen", args)
     };
 
-    es.addEventListener("price-update", (event) => {
+    es.addEventListener("event-update", (event) => {
         const parsedData = JSON.parse(event.data);
         console.log(event)
 
-        const price = parsedData.ServerTime;
-        priceEl.innerText = price;
+        const data = parsedData.message;
+        text.innerText = data;
     });
 </script>
 </body>

@@ -4,64 +4,115 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 //go:embed index.html
 var indexHTML []byte
 
+type Request struct {
+	Message string `json:"message"`
+}
+type DataEvent struct {
+	ServerTime string `json:"server_time"`
+	Message    string `json:"message"`
+}
+
+var Event = make(chan DataEvent)
+
 func main() {
-	Images := []string{
-		"https://www.banksinarmas.com/id/public/revamp/logoj.png",
-		"https://bengkuluekspress.disway.id/upload/2014/01/bank-sinarmas-syariah.jpg",
-		"https://statik.tempo.co/data/2010/12/20/id_57840/57840_620.jpg",
+	router := gin.Default()
+
+	router.GET("/", func(c *gin.Context) {
+		c.Data(http.StatusOK, "text/html; charset=utf-8", indexHTML)
+	})
+
+	router.GET("/events", HandleEvent)
+	router.POST("/send_data", SendData)
+	router.Run(":4444")
+}
+
+func SendData(c *gin.Context) {
+	var input Request
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.AbortWithStatusJSON(400, err.Error())
+		return
 	}
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write(indexHTML)
+	ServerTime := time.Now().Format("2006-02-01 15:04")
+	Event <- DataEvent{
+		Message:    input.Message,
+		ServerTime: ServerTime,
+	}
+
+	c.JSON(200, map[string]interface{}{
+		"status": "oke",
+		"date":   ServerTime,
 	})
 
-	http.HandleFunc("/crypto-price", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/event-stream")
-		w.Header().Set("Cache-Control", "no-cache")
-		w.Header().Set("Connection", "keep-alive")
+}
 
-		ticker := time.NewTicker(3 * time.Second)
-		defer ticker.Stop()
+func HandleEvent(c *gin.Context) {
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
 
-		for {
-			select {
-			case <-ticker.C:
-
-				eventType := "price-update"
-				rand.Seed(time.Now().UnixNano())
-
-				randomNumber := rand.Intn(3)
-
-				data := map[string]interface{}{
-					"image":      Images[randomNumber],
-					"ServerTime": time.Now().Format("15:04:05"),
-				}
-				jsonData, err := json.Marshal(data)
-				if err != nil {
-					fmt.Println("Error encoding JSON:", err)
-					return
-				}
-				message := fmt.Sprintf("event: %s\ndata: %s\n\n", eventType, jsonData)
-
-				fmt.Fprintf(w, message)
-
-				w.(http.Flusher).Flush()
-			case <-r.Context().Done():
-				fmt.Println("Client closed the connection.")
+	for {
+		select {
+		case data := <-Event:
+			fmt.Println("data ", data)
+			jsonData, err := json.Marshal(data)
+			if err != nil {
+				fmt.Println("Error encoding JSON:", err)
 				return
 			}
+			message := fmt.Sprintf("event: %s\ndata: %s\n\n", "event-update", jsonData)
+
+			c.Writer.WriteString(message)
+			c.Writer.Flush()
+		case <-c.Request.Context().Done():
+			fmt.Println("Client closed the connection.")
+			return
+
 		}
-
-	})
-
-	http.ListenAndServe(":4444", nil)
+	}
 }
+
+//func HandleEvent(c *gin.Context) {
+//	c.Header("Content-Type", "text/event-stream")
+//	c.Header("Cache-Control", "no-cache")
+//	c.Header("Connection", "keep-alive")
+//
+//	ticker := time.NewTicker(3 * time.Second)
+//	defer ticker.Stop()
+//
+//	for {
+//		select {
+//		case <-ticker.C:
+//			eventType := "price-update"
+//			rand.Seed(time.Now().UnixNano())
+//			randomNumber := rand.Intn(10)
+//
+//			data := map[string]interface{}{
+//				"message":      randomNumber,
+//				"ServerTime": time.Now().Format("15:04:05"),
+//			}
+//			jsonData, err := json.Marshal(data)
+//			if err != nil {
+//				fmt.Println("Error encoding JSON:", err)
+//				return
+//			}
+//			message := fmt.Sprintf("event: %s\ndata: %s\n\n", eventType, jsonData)
+//
+//			c.Writer.WriteString(message)
+//			c.Writer.Flush()
+//		case <-c.Request.Context().Done():
+//			fmt.Println("Client closed the connection.")
+//			return
+//		}
+//	}
+//}
