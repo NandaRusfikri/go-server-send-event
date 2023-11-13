@@ -1,12 +1,11 @@
 package main
 
 import (
-	"bytes"
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -14,6 +13,11 @@ import (
 var indexHTML []byte
 
 func main() {
+	Images := []string{
+		"https://www.banksinarmas.com/id/public/revamp/logoj.png",
+		"https://bengkuluekspress.disway.id/upload/2014/01/bank-sinarmas-syariah.jpg",
+		"https://statik.tempo.co/data/2010/12/20/id_57840/57840_620.jpg",
+	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -31,13 +35,25 @@ func main() {
 		for {
 			select {
 			case <-ticker.C:
-				event, err := formatServerSentEvent("price-update", time.Now().Format("15:04:05"))
-				if err != nil {
-					fmt.Println(err)
 
+				eventType := "price-update"
+				rand.Seed(time.Now().UnixNano())
+
+				randomNumber := rand.Intn(3)
+
+				data := map[string]interface{}{
+					"image":      Images[randomNumber],
+					"ServerTime": time.Now().Format("15:04:05"),
 				}
-				fmt.Println("event ", event)
-				fmt.Fprintf(w, event)
+				jsonData, err := json.Marshal(data)
+				if err != nil {
+					fmt.Println("Error encoding JSON:", err)
+					return
+				}
+				message := fmt.Sprintf("event: %s\ndata: %s\n\n", eventType, jsonData)
+
+				fmt.Fprintf(w, message)
+
 				w.(http.Flusher).Flush()
 			case <-r.Context().Done():
 				fmt.Println("Client closed the connection.")
@@ -48,26 +64,4 @@ func main() {
 	})
 
 	http.ListenAndServe(":4444", nil)
-}
-
-func formatServerSentEvent(event string, data any) (string, error) {
-	m := map[string]any{
-		"data": data,
-	}
-
-	buff := bytes.NewBuffer([]byte{})
-
-	encoder := json.NewEncoder(buff)
-
-	err := encoder.Encode(m)
-	if err != nil {
-		return "", err
-	}
-
-	sb := strings.Builder{}
-
-	sb.WriteString(fmt.Sprintf("event: %s\n", event))
-	sb.WriteString(fmt.Sprintf("data: %v\n\n", buff.String()))
-
-	return sb.String(), nil
 }

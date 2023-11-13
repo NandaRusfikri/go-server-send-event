@@ -27,7 +27,9 @@
 
     es.addEventListener("price-update", (event) => {
         const parsedData = JSON.parse(event.data);
-        const price = parsedData.data;
+        console.log(event)
+
+        const price = parsedData.ServerTime;
         priceEl.innerText = price;
     });
 </script>
