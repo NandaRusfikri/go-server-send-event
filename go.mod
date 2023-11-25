@@ -1,4 +1,4 @@
-module go-server-sent-event
+module go-server-sent-events
 
 go 1.21
 

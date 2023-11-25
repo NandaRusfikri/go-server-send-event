@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSE</title>
+</head>
+<body>
+<body>
+<h1>HTTP SSE (Server Sent Events)</h1>
+
+<h2>Event: </h2><h2 id="text" >Loading data...</h2>
+
+<script>
+    const text = document.getElementById("text");
+
+    const es = new EventSource("/api/sse");
+    es.onerror = (err) => {
+        console.log("onerror", err)
+    };
+
+    es.onmessage = (msg) => {
+        console.log("onmessage", msg)
+    };
+
+    es.onopen = (...args) => {
+        console.log("onopen", args)
+    };
+
+    es.addEventListener("event-update", (event) => {
+        const parsedData = JSON.parse(event.data);
+        console.log(event)
+
+        // const data = parsedData.message;
+        text.innerText = event.data;
+    });
+</script>
+</body>
+
+</html>

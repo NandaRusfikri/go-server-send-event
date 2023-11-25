@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Polling</title>
+</head>
+<body>
+
+<h1>HTTP Polling </h1>
+
+<button onclick="makeApiRequest()">Click me to make API request</button>
+
+<h2 id="text">
+  <!-- Display the API response here -->
+</h2>
+
+<script>
+  function makeApiRequest() {
+    // Make an API request using JavaScript
+    fetch('/api/polling', {
+      method: 'GET',
+    })
+            .then(response => response.json())
+            .then(data => {
+              console.log('API Response:', data);
+
+              // Display the API response in the HTML page
+              const responseContainer = document.getElementById('text');
+              responseContainer.innerHTML = `<p>API Response: ${JSON.stringify(data)}</p>`;
+
+              // Handle the response as needed
+            })
+            .catch(error => console.error('API Request Error:', error));
+  }
+</script>
+
+</body>
+</html>
